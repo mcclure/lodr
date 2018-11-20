@@ -8,7 +8,7 @@ lovr.filesystem.mount(target) -- Load target
 
 local hasMain = lovr.filesystem.isFile('main.lua')
 
-print("main?", hasMain)
+--print("main?", hasMain)
 --for i, v in pairs(package.loaded) do print(i,v) end print("done")
 
 local watched = {}
@@ -16,8 +16,10 @@ local watchtimes = {}
 
 local function recursiveWatch(path)
 	if lovr.filesystem.isDirectory(path) then
-		if not path:match('^%.') then
-			recursiveWatch(path)
+		for i,filename in ipairs(lovr.filesystem.getDirectoryItems(path)) do
+			if not filename:match('^%.') then
+				recursiveWatch((path ~= "/" and path or "") .. "/" .. filename)
+			end
 		end
 	else
 		table.insert(watched, path)
@@ -28,7 +30,7 @@ end
 -- TODO: if not hasMain add main to watched and run anwyay
 if hasMain then
 	-- TODO: Watching all files has good coverage but may not be the most efficient?
-	recursiveWatch(target)
+	recursiveWatch("/")
 
 	package.loaded.main = nil
 	require 'main'
@@ -50,7 +52,7 @@ if hasMain then
 
 					local path = watched[watchiter]
 					local lastModified = lovr.filesystem.getLastModified(path)
-					print(watchiter,_, path, watchtimes[path], lastModified)
+					--print(watchiter,_, path, watchtimes[path], lastModified)
 					if not watchtimes[path] then watchtimes[path] = lastModified
 					elseif watchtimes[path] < lastModified then return "restart" end
 
