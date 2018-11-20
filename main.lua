@@ -32,36 +32,47 @@ if hasMain then
 	-- TODO: Watching all files has good coverage but may not be the most efficient?
 	recursiveWatch("/")
 
+	local function makeWatchWrapper(wrappedFunc, wrapTag)
+		return function(...)
+			local loop = wrappedFunc(...)
+			local lastTimeRollover = lovr.timer.getTime()
+			local watchedc = #watched
+			local watchiter = watchedc+1
+
+			return function(...)
+				-- Check individual files no more than once a second. Check no more than 10 files per frame
+				local getTime = lovr.timer.getTime()
+				local rollover = getTime > lastTimeRollover + 1
+				if (watchiter <= watchedc or rollover) then
+					if watchiter > watchedc then watchiter = 1 end
+					for _=1,CHECKS_PER_FRAME do
+						if watchiter > watchedc then break end
+
+						local path = watched[watchiter]
+						local lastModified = lovr.filesystem.getLastModified(path)
+						--print(wrapTag, watchiter,_, path, watchtimes[path], lastModified)
+						if not watchtimes[path] then watchtimes[path] = lastModified
+						elseif watchtimes[path] < lastModified then return "restart" end
+
+						watchiter = watchiter + 1
+					end 
+				end
+				if rollover then lastTimeRollover = getTime end
+
+				return loop(...)
+			end
+		end
+	end
+
+	-- Need to attempt to wrap errhand twice-- first time to catch errors in main.lua
+	local loadTimeErrhand = makeWatchWrapper(lovr.errhand, "errhand")
+	lovr.errhand = loadTimeErrhand
+
 	package.loaded.main = nil
 	require 'main'
-	local run = lovr.run
-	lovr.run = function()
-		local loop = run()
-		local lastTimeRollover = lovr.timer.getTime()
-		local watchedc = #watched
-		local watchiter = watchedc+1
 
-		return function()
-			-- Check individual files no more than once a second. Check no more than 10 files per frame
-			local getTime = lovr.timer.getTime()
-			local rollover = getTime > lastTimeRollover + 1
-			if (watchiter <= watchedc or rollover) then
-				if watchiter > watchedc then watchiter = 1 end
-				for _=1,CHECKS_PER_FRAME do
-					if watchiter > watchedc then break end
-
-					local path = watched[watchiter]
-					local lastModified = lovr.filesystem.getLastModified(path)
-					--print(watchiter,_, path, watchtimes[path], lastModified)
-					if not watchtimes[path] then watchtimes[path] = lastModified
-					elseif watchtimes[path] < lastModified then return "restart" end
-
-					watchiter = watchiter + 1
-				end 
-			end
-			if rollover then lastTimeRollover = getTime end
-
-			return loop()
-		end
+	lovr.run = makeWatchWrapper(lovr.run, "run")
+	if loadTimeErrhand ~= lovr.errhand then -- Second errhand wrap only needed if main.lua has an errhand
+		lovr.errhand = makeWatchWrapper(lovr.errhand, "errhand (modded)")
 	end
 end -- TODO: ConfError, not hasMain
