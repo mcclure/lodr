@@ -1,12 +1,36 @@
--- Constants
-local CHECKS_PER_FRAME = 10
-
-local target
-if lovr.getOS() == "Android" then
-	target = "/sdcard/lovr-dev/" .. lovr.android.getApplicationId()
-else
-	target = arg[1]
+-- Nab data from conf
+local confData = _lodrConfData
+_lodrConfData = nil
+local conf = confData and confData.conf and confData.conf.lodr
+if conf then
+	local function confFail(failed, why)
+		if failed then
+			confData.failure = {"The \"lodr\" table in your conf.lua contains an error:\n" .. why, ""}
+			conf = nil
+		end
+		return not failed
+	end
+	local function checkType(f, ty)
+		return conf[f] and type(conf[f]) ~= ty, "conf.lodr."..f.." must be a "..ty
+	end
+	local function checkAllStrings(t)
+		for _,v in ipairs(t) do
+			if type(v) ~= "string" then
+				return false
+			end
+		end
+		return true
+	end
+	confFail(checkType("checksPerFrame", "number"))
+	and confFail(checkType("watch", "table"))
+	and confFail(conf.watch and checkAllStrings(conf.watch), "conf.lodr.watch contained a non-string value"))
 end
+
+-- Constants
+local checksPerFrame = conf and conf.checksPerFrame or 10
+
+local target = require("target")
+
 if not arg[0] then error("arg[0] missing-- this is impossible, something is wrong with this copy of lovr") end
 if not target then error("Please specify a project for lodr to run on the command line") end
 
@@ -21,7 +45,7 @@ end
 tryMount()
 
 --print("main?", hasMain)
---for i, v in pairs(package.loaded) do print(i,v) end print("done")
+for i, v in pairs(package.loaded) do print(i,v) end print("done")
 
 local watched = {}
 local watchtimes = {}
@@ -43,6 +67,10 @@ end
 if hasMain then
 	-- TODO: Watching all files has good coverage but may not be the most efficient?
 	recursiveWatch("/")
+	if not confData.exists then
+		table.insert(watched, "/conf.lua")
+		watchtimes["/conf.lua"] = lovr.timer.getTime()
+	end
 
 	local function makeWatchWrapper(wrappedFunc, wrapTag)
 		return function(...)
@@ -57,7 +85,7 @@ if hasMain then
 				local rollover = getTime > lastTimeRollover + 1
 				if (watchiter <= watchedc or rollover) then
 					if watchiter > watchedc then watchiter = 1 end
-					for _=1,CHECKS_PER_FRAME do
+					for _=1,checksPerFrame do
 						if watchiter > watchedc then break end
 
 						local path = watched[watchiter]
@@ -78,16 +106,24 @@ if hasMain then
 		end
 	end
 
-	-- Need to attempt to wrap errhand twice-- first time to catch errors in main.lua
-	local loadTimeErrhand = makeWatchWrapper(lovr.errhand, "errhand")
-	lovr.errhand = loadTimeErrhand
+	if confData.failure then
+		lovr.run = makeWatchWrapper(
+			function() return lovr.errhand(confData.failure[1], confData.failure[2]) end,
+			"conf error"
+		)
+	else
+		-- Need to attempt to wrap errhand twice-- first time to catch errors in main.lua
+		local loadTimeErrhand = makeWatchWrapper(lovr.errhand, "errhand")
+		lovr.errhand = loadTimeErrhand
 
-	package.loaded.main = nil
-	require 'main'
+		package.loaded.main = nil
+		package.loaded.conf = confData.returned
+		require 'main'
 
-	lovr.run = makeWatchWrapper(lovr.run, "run")
-	if loadTimeErrhand ~= lovr.errhand then -- Second errhand wrap only needed if main.lua has an errhand
-		lovr.errhand = makeWatchWrapper(lovr.errhand, "errhand (modded)")
+		lovr.run = makeWatchWrapper(lovr.run, "run")
+		if loadTimeErrhand ~= lovr.errhand then -- Second errhand wrap only needed if main.lua has an errhand
+			lovr.errhand = makeWatchWrapper(lovr.errhand, "errhand (modded)")
+		end
 	end
 else
 	local message, width, font, pixelDensity, lastTimeRollover
