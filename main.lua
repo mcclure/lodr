@@ -85,10 +85,19 @@ if hasMain then
 		local loadTimeErrhand = makeWatchWrapper(lovr.errhand, "errhand")
 		lovr.errhand = loadTimeErrhand
 
+		-- Erase all evidence we ever existed: Packages
 		package.loaded.main = nil
+		package.loaded.target = nil
+		package.loaded.makeWrapper = nil
 		package.loaded.conf = package.loaded['tempConfDir.conf']
 		package.loaded['tempConfDir.conf'] = nil
 
+		-- Erase all evidence we ever existed: Args
+		arg[0] = target
+		local argc = #arg
+		for i=1,argc do arg[i] = arg[i+1] end
+
+		-- Run main
 		require 'main'
 
 		lovr.run = makeWatchWrapper(lovr.run, "run")
