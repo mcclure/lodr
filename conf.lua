@@ -11,32 +11,27 @@ if target then
 	if hasConf then
 		_lodrConfData.exists = true
 
-		local oldConf = lovr.conf
-
 		local watched = {confPath, confPath=timer.getTime()}
-		local makeWatchWrapper = require("makeWrapper")(watched, 10, true)
+		local makeWatchWrapper = require("makeWrapper")(watched, 10)
 		local originalErrhand = lovr.errhand
-		lovr.errhand = makeWatchWrapper(lovr.errhand, "errhand (conf.lua)")
+		local confErrhand = makeWatchWrapper(lovr.errhand, "errhand (conf.lua)")
 
+		lovr.errhand = confErrhand
 		local result = require("tempConfDir.conf")
+		lovr.errhand = originalErrhand
 
 		local newConf = lovr.conf
+		_lodrConfData.confFunc = newConf
 
-		_lodrConfData.returned = result
+		if newConf then
+			function lovr.conf(t)
+				lovr.errhand = confErrhand
+				local result = newConf(t)
+				lovr.errhand = originalErrhand
 
-		if newConf ~= oldConf then
-			local newConfResult = newConf()
-			-- Turn on timer?
-
-			function lovr.conf()
-				return newConfResult
+				_lodrConfData.conf = t
+				return result
 			end
-
-			_lodrConfData.conf = newConfResult
 		end
-
-		lovr.errhand = originalErrhand
 	end
-
-	if hasProject then lovr.filesystem.unmount(target) end
 end

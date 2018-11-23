@@ -1,7 +1,7 @@
 -- Nab data from conf
 local confData = _lodrConfData
 _lodrConfData = nil
-local conf = confData and confData.conf and confData.conf.lodr
+local conf = confData.conf and confData.conf.lodr
 local confFailure
 if conf then
 	local function confFail(failed, why)
@@ -17,10 +17,10 @@ if conf then
 	local function checkAllStrings(t)
 		for _,v in ipairs(t) do
 			if type(v) ~= "string" then
-				return false
+				return true
 			end
 		end
-		return true
+		return false
 	end
 	local _ = confFail(checkType("checksPerFrame", "number"))
 	      and confFail(checkType("watch", "table"))
@@ -36,6 +36,7 @@ local target = require("target")
 if not arg[0] then error("arg[0] missing-- this is impossible, something is wrong with this copy of lovr") end
 if not target then error("Please specify a project for lodr to run on the command line") end
 
+lovr.filesystem.unmount(target) -- Speculatively unload tempConfDir/ from conf.lua
 lovr.filesystem.unmount(arg[0]) -- Unload lodr
 
 local hasProject, hasMain
@@ -69,10 +70,15 @@ end
 -- TODO: if not hasMain add main to watched and run anwyay
 if hasMain then
 	-- TODO: Watching all files has good coverage but may not be the most efficient?
-	recursiveWatch("/")
-	if not confData.exists then
-		table.insert(watched, "/conf.lua")
-		watched["/conf.lua"] = timer.getTime()
+	if not (conf and conf.watch) then
+		recursiveWatch("/")
+		if not confData.exists then
+			table.insert(watched, "/conf.lua")
+		end
+	else
+		for _,v in ipairs(conf.watch) do
+			table.insert(watched, v)
+		end
 	end
 
 	if confFailure then
@@ -84,6 +90,8 @@ if hasMain then
 		-- Need to attempt to wrap errhand twice-- first time to catch errors in main.lua
 		local loadTimeErrhand = makeWatchWrapper(lovr.errhand, "errhand")
 		lovr.errhand = loadTimeErrhand
+
+		if confData.confFunc then lovr.conf = confData.confFunc end
 
 		-- Erase all evidence we ever existed: Packages
 		package.loaded.main = nil
@@ -101,7 +109,7 @@ if hasMain then
 		require 'main'
 
 		lovr.run = makeWatchWrapper(lovr.run, "run")
-		if loadTimeErrhand ~= lovr.errhand then -- Second errhand wrap only needed if main.lua has an errhand
+		if loadTimeErrhand ~= lovr.errhand and not (conf and conf.overrideErrhand) then -- Second errhand wrap only needed if main.lua has an errhand
 			lovr.errhand = makeWatchWrapper(lovr.errhand, "errhand (modded)")
 		end
 	end
@@ -119,7 +127,7 @@ else
 			message = message .. "\n\nYou can upload a " .. (hasProject and "" or "fixed ")
 			                  .. "project with:\nadb push your_directory_name " .. target
 		else
-			message = message .. "\n\nPls fix"
+			message = message .. "\n\nPlz fix"
 		end
 		width = font:getWidth(message, .55 * pixelDensity)
 	end
