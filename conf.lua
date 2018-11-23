@@ -1,46 +1,41 @@
 local target = require("target")
+local timer = require("lovr.timer")
 
 _lodrConfData = {}
 
 if target then
-	local hasProject = lovr.filesystem.mount(target, "tempConfDir")
-	local hasConf = lovr.filesystem.isFile('tempConfDir/conf.lua')
+	local hasProject = lovr.filesystem.mount(target, "/tempConfDir")
+	local confPath = "/tempConfDir/conf.lua"
+	local hasConf = lovr.filesystem.isFile(confPath)
 
 	if hasConf then
 		_lodrConfData.exists = true
 
 		local oldConf = lovr.conf
 
-		local function xpcallFailed(message)
-			return {message, debug.traceback()}
-		end
+		local watched = {confPath, confPath=timer.getTime()}
+		local makeWatchWrapper = require("makeWrapper")(watched, 10, true)
+		local originalErrhand = lovr.errhand
+		lovr.errhand = makeWatchWrapper(lovr.errhand, "errhand (conf.lua)")
 
-		local success, result = xpcall(
-			function() return require("tempConfDir.conf") end,
-			xpcallFailed
-		)
+		local result = require("tempConfDir.conf")
 
-		if success then
-			local newConf = lovr.conf
+		local newConf = lovr.conf
 
-			_lodrConfData.returned = result
+		_lodrConfData.returned = result
 
-			if newConf ~= oldConf then
-				local newConfSuccess, newConfResult = xpcall(newConf, xpcallFailed)
+		if newConf ~= oldConf then
+			local newConfResult = newConf()
+			-- Turn on timer?
 
-				if newConfSuccess then
-					function lovr.conf()
-						return newConfResult
-					end
-
-					_lodrConfData.conf = newConfResult
-				else
-					_lodrConfData.failure = newConfResult
-				end
+			function lovr.conf()
+				return newConfResult
 			end
-		else
-			_lodrConfData.failure = result
+
+			_lodrConfData.conf = newConfResult
 		end
+
+		lovr.errhand = originalErrhand
 	end
 
 	if hasProject then lovr.filesystem.unmount(target) end

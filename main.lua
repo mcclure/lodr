@@ -2,10 +2,11 @@
 local confData = _lodrConfData
 _lodrConfData = nil
 local conf = confData and confData.conf and confData.conf.lodr
+local confFailure
 if conf then
 	local function confFail(failed, why)
 		if failed then
-			confData.failure = {"The \"lodr\" table in your conf.lua contains an error:\n" .. why, ""}
+			confFailure = "The \"lodr\" table in your conf.lua contains an error:\n" .. why
 			conf = nil
 		end
 		return not failed
@@ -21,12 +22,13 @@ if conf then
 		end
 		return true
 	end
-	confFail(checkType("checksPerFrame", "number"))
-	and confFail(checkType("watch", "table"))
-	and confFail(conf.watch and checkAllStrings(conf.watch), "conf.lodr.watch contained a non-string value"))
+	local _ = confFail(checkType("checksPerFrame", "number"))
+	      and confFail(checkType("watch", "table"))
+	      and confFail(conf.watch and checkAllStrings(conf.watch), "conf.lodr.watch contained a non-string value")
 end
 
 -- Constants
+local timer = require("lovr.timer")
 local checksPerFrame = conf and conf.checksPerFrame or 10
 
 local target = require("target")
@@ -45,10 +47,11 @@ end
 tryMount()
 
 --print("main?", hasMain)
-for i, v in pairs(package.loaded) do print(i,v) end print("done")
+--for i, v in pairs(package.loaded) do print(i,v) end print("done")
 
 local watched = {}
-local watchtimes = {}
+
+local makeWatchWrapper = require("makeWrapper")(watched, checksPerFrame)
 
 local function recursiveWatch(path)
 	if lovr.filesystem.isDirectory(path) then
@@ -69,46 +72,12 @@ if hasMain then
 	recursiveWatch("/")
 	if not confData.exists then
 		table.insert(watched, "/conf.lua")
-		watchtimes["/conf.lua"] = lovr.timer.getTime()
+		watched["/conf.lua"] = timer.getTime()
 	end
 
-	local function makeWatchWrapper(wrappedFunc, wrapTag)
-		return function(...)
-			local loop = wrappedFunc(...)
-			local lastTimeRollover = lovr.timer.getTime()
-			local watchedc = #watched
-			local watchiter = watchedc+1
-
-			return function(...)
-				-- Check individual files no more than once a second. Check no more than 10 files per frame
-				local getTime = lovr.timer.getTime()
-				local rollover = getTime > lastTimeRollover + 1
-				if (watchiter <= watchedc or rollover) then
-					if watchiter > watchedc then watchiter = 1 end
-					for _=1,checksPerFrame do
-						if watchiter > watchedc then break end
-
-						local path = watched[watchiter]
-						local lastModified = lovr.filesystem.getLastModified(path)
-						--print(wrapTag, watchiter,_, path, watchtimes[path], lastModified)
-						if lastModified then -- This can be false if a file is deleted
-							if not watchtimes[path] then watchtimes[path] = lastModified
-							elseif watchtimes[path] < lastModified then return "restart" end
-						end
-
-						watchiter = watchiter + 1
-					end 
-				end
-				if rollover then lastTimeRollover = getTime end
-
-				return loop(...)
-			end
-		end
-	end
-
-	if confData.failure then
+	if confFailure then
 		lovr.run = makeWatchWrapper(
-			function() return lovr.errhand(confData.failure[1], confData.failure[2]) end,
+			function() return lovr.errhand(confFailure, "") end,
 			"conf error"
 		)
 	else
@@ -117,7 +86,9 @@ if hasMain then
 		lovr.errhand = loadTimeErrhand
 
 		package.loaded.main = nil
-		package.loaded.conf = confData.returned
+		package.loaded.conf = package.loaded['tempConfDir.conf']
+		package.loaded['tempConfDir.conf'] = nil
+
 		require 'main'
 
 		lovr.run = makeWatchWrapper(lovr.run, "run")
@@ -154,7 +125,7 @@ else
 	end
 
 	function lovr.update()
-		local getTime = lovr.timer.getTime()
+		local getTime = timer.getTime()
 		if lastTimeRollover and getTime > lastTimeRollover + 1 then
 			tryMount()
 			if hasMain then
