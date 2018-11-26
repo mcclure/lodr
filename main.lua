@@ -27,14 +27,19 @@ if conf then
 	      and confFail(conf.watch and checkAllStrings(conf.watch), "conf.lodr.watch contained a non-string value")
 end
 
--- Constants
+-- Because of conf tomfoolery, all lovr packages except filesystem need to be manually required
 local timer = require("lovr.timer")
+
+-- Constants
 local checksPerFrame = conf and conf.checksPerFrame or 10
 
 local target = require("target")
 
 if not arg[0] then error("arg[0] missing-- this is impossible, something is wrong with this copy of lovr") end
 if not target then error("Please specify a project for lodr to run on the command line") end
+
+local watched = {}
+local makeWatchWrapper = require("makeWrapper")(watched, checksPerFrame)
 
 lovr.filesystem.unmount(target) -- Speculatively unload tempConfDir/ from conf.lua
 lovr.filesystem.unmount(arg[0]) -- Unload lodr
@@ -49,10 +54,6 @@ tryMount()
 
 --print("main?", hasMain)
 --for i, v in pairs(package.loaded) do print(i,v) end print("done")
-
-local watched = {}
-
-local makeWatchWrapper = require("makeWrapper")(watched, checksPerFrame)
 
 local function recursiveWatch(path)
 	if lovr.filesystem.isDirectory(path) then
@@ -114,30 +115,65 @@ if hasMain then
 		end
 	end
 else
+	local graphics = require("lovr.graphics")
+	local event = require("lovr.event")
 	local message, width, font, pixelDensity, lastTimeRollover
 
 	function resetMessage()
+		local lastMessage = message
+
+		-- This is kind of annoying actually
+		local atLeastOneFile, firstFileIsDirectory, atLeastTwoFiles
+		if hasProject then
+			for _,filename in ipairs(lovr.filesystem.getDirectoryItems("/")) do
+				if not filename:match('^%.') then
+					if atLeastOneFile then
+						atLeastTwoFiles = true
+						break
+					else
+						atLeastOneFile = true
+						firstFileIsDirectory = lovr.filesystem.isDirectory("/" .. filename)
+					end
+				end
+			end
+		end
+
 		message = "The directory\n" .. target .. "\n"
 		if hasProject then
 			message = message .. "doesn't exist."
+		elseif not atLeastOneFile then
+			message = message .. "is empty."
 		else
 			message = message .. "does not contain a main.lua."
 		end
 		if lovr.getOS() == "Android" then
-			message = message .. "\n\nYou can upload a " .. (hasProject and "" or "fixed ")
-			                  .. "project with:\nadb push your_directory_name " .. target
+			message = message .. "\n\To upload a " .. (hasProject and atLeastOneFile and "" or "fixed ")
+			                  .. "project,\ncd to your project directory and run:\n"
+			                  .. "adb push --sync . " .. target
+			-- Detect, and warn the user about, a completely miserable UX limitation in adb push
+			if firstFileIsDirectory and not atLeastTwoFiles then
+				message = message .. "\n\nJust checking: Did you try to adb push a directory?"
+				                  .. "\nThe thing you \"adb push\" has to end with a \".\""
+				                  .. "\nSo this will work:"
+				                  .. "\nadb push YOURDIRECTORY/. " .. target
+				                  .. "\nBut this won't:"
+				                  .. "\nadb push YOURDIRECTORY " .. target
+				                  .. "\nI know, it's annoying. Sorry :("
+			end
 		else
 			message = message .. "\n\nPlz fix"
 		end
 		width = font:getWidth(message, .55 * pixelDensity)
+		
+		if message ~= lastMessage then print(message) end
 	end
 
 	function lovr.load()
-		lastTimeRollover = lovr.timer.getTime()
+		lastTimeRollover = timer.getTime()
 		font = lovr.graphics.getFont()
 		pixelDensity = font:getPixelDensity()
-		lovr.graphics.setBackgroundColor(.105, .098, .137) -- look like boot.lua errhand
-  		lovr.graphics.setColor(.863, .863, .863)
+		graphics.setBackgroundColor(.105, .098, .137) -- look like boot.lua errhand
+  		graphics.setColor(.863, .863, .863)
 		resetMessage()
 	end
 
@@ -147,7 +183,7 @@ else
 			tryMount()
 			if hasMain then
 				lastTimeRollover = nil
-				lovr.event.quit("restart")
+				event.quit("restart")
 			else
 				lastTimeRollover = getTime
 				resetMessage()
@@ -156,6 +192,6 @@ else
 	end
 
 	function lovr.draw()
-    	lovr.graphics.print(message, -width / 2, 0, -20, 1, 0, 0, 0, 0, .55 * pixelDensity, 'left')
+    	graphics.print(message, -width / 2, 0, -20, 1, 0, 0, 0, 0, .55 * pixelDensity, 'left')
 	end
 end -- TODO: ConfError, not hasMain
