@@ -139,7 +139,7 @@ else
 		end
 
 		message = "The directory\n" .. target .. "\n"
-		if hasProject then
+		if not hasProject then
 			message = message .. "doesn't exist."
 		elseif not atLeastOneFile then
 			message = message .. "is empty."
@@ -147,18 +147,18 @@ else
 			message = message .. "does not contain a main.lua."
 		end
 		if lovr.getOS() == "Android" then
-			message = message .. "\n\To upload a " .. (hasProject and atLeastOneFile and "" or "fixed ")
+			message = message .. "\n\To upload a " .. ((not hasProject or not atLeastOneFile) and "" or "fixed ")
 			                  .. "project,\ncd to your project directory and run:\n"
 			                  .. "adb push --sync . " .. target
 			-- Detect, and warn the user about, a completely miserable UX limitation in adb push
 			if firstFileIsDirectory and not atLeastTwoFiles then
-				message = message .. "\n\nJust checking: Did you try to adb push a directory?"
+				message = message .. "\n\n-- OKAY, I'M REALLY SORRY, BUT:"
+				                  .. "\nDid you try to adb push a directory?"
 				                  .. "\nThe thing you \"adb push\" has to end with a \".\""
 				                  .. "\nSo this will work:"
 				                  .. "\nadb push YOURDIRECTORY/. " .. target
 				                  .. "\nBut this won't:"
 				                  .. "\nadb push YOURDIRECTORY " .. target
-				                  .. "\nI know, it's annoying. Sorry :("
 			end
 		else
 			message = message .. "\n\nPlz fix"
