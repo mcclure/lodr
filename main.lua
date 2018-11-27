@@ -147,7 +147,7 @@ else
 			message = message .. "does not contain a main.lua."
 		end
 		if lovr.getOS() == "Android" then
-			message = message .. "\n\To upload a " .. ((not hasProject or not atLeastOneFile) and "" or "fixed ")
+			message = message .. "\n\nTo upload a " .. ((not hasProject or not atLeastOneFile) and "" or "fixed ")
 			                  .. "project,\ncd to your project directory and run:\n"
 			                  .. "adb push --sync . " .. target
 			-- Detect, and warn the user about, a completely miserable UX limitation in adb push
