@@ -44,32 +44,44 @@ local makeWatchWrapper = require("makeWrapper")(watched, checksPerFrame)
 lovr.filesystem.unmount(target) -- Speculatively unload tempConfDir/ from conf.lua
 lovr.filesystem.unmount(arg[0]) -- Unload lodr
 
-local hasProject, hasMain
+local hasProject, hasMain, mainRealpath
 
 function tryMount()
 	hasProject = hasProject or lovr.filesystem.mount(target) -- Load target
 	hasMain = lovr.filesystem.isFile('main.lua')
+	if hasMain then mainRealpath = lovr.filesystem.getRealDirectory('main.lua') end
 end
 tryMount()
 
 --print("main?", hasMain)
 --for i, v in pairs(package.loaded) do print(i,v) end print("done")
 
+local function startsWith(s, prefix)
+	return s:sub(1, #prefix) == s
+end
+
 local function recursiveWatch(path)
 	if lovr.filesystem.isDirectory(path) then
 		for i,filename in ipairs(lovr.filesystem.getDirectoryItems(path)) do
-			if not filename:match('^%.') then
+			if not startsWith(filename, ".") then -- Skip hidden files/directories
 				recursiveWatch((path ~= "/" and path or "") .. "/" .. filename)
 			end
 		end
 	else
-		table.insert(watched, path)
+		-- Files in the save directory were written *by* the program; if they change, that isn't a program change. Don't watch them
+		if startsWith(lovr.filesystem.getRealDirectory(path), mainRealpath) then
+			table.insert(watched, path)
+		end
 	end
 end
 
 -- TODO: Because lodr has no conf.lua, all modules will be loaded, regardless of what target requested
 -- TODO: if not hasMain add main to watched and run anwyay
 if hasMain then
+	if lovr.getOS() == "Android" then
+		print("Loading a script from the user files directory. To upload a new script, cd to your project directory and run: adb push --sync . " .. target)
+	end
+
 	-- TODO: Watching all files has good coverage but may not be the most efficient?
 	if not (conf and conf.watch) then
 		recursiveWatch("/")
