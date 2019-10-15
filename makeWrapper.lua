@@ -23,7 +23,7 @@ return function(watched, checksPerFrame)
 						--print(wrapTag, watchiter,_, path, watchtimes[path], lastModified)
 						if initialized then
 							local had, have = watched[path] ~= nil, lastModified ~= nil
-							if had ~= have or (had and have and watched[path] < lastModified) then
+							if had ~= have or (had and have and watched[path] ~= lastModified) then
 								return "restart"
 							end
 						else
