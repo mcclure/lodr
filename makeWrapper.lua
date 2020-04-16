@@ -6,6 +6,7 @@ return function(watched, checksPerFrame)
 			local watchedc = #watched
 			local watchiter = watchedc+1
 			local timer = require("lovr.timer")
+			local event = require("lovr.event")
 			local initialized = false
 
 			return function(...)
@@ -24,7 +25,7 @@ return function(watched, checksPerFrame)
 						if initialized then
 							local had, have = watched[path] ~= nil, lastModified ~= nil
 							if had ~= have or (had and have and watched[path] ~= lastModified) then
-								return "restart"
+								event.restart()
 							end
 						else
 							watched[path] = lastModified

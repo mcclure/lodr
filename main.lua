@@ -75,8 +75,6 @@ local function recursiveWatch(path)
 	end
 end
 
--- TODO: Because lodr has no conf.lua, all modules will be loaded, regardless of what target requested
--- TODO: if not hasMain add main to watched and run anwyay
 if hasMain then
 	if lovr.getOS() == "Android" then
 		print("Loading a script from the user files directory. To upload a new script, cd to your project directory and run: adb push --sync . " .. target)
