@@ -35,6 +35,7 @@ local checksPerFrame = conf and conf.checksPerFrame or 10
 
 local target = require("target")
 
+-- FIXME: it's currently crashing on this line, arg[0] is empty
 if not arg[0] then error("arg[0] missing-- this is impossible, something is wrong with this copy of lovr") end
 if not target then error("Please specify a project for lodr to run on the command line") end
 
@@ -193,7 +194,8 @@ else
 			tryMount()
 			if hasMain then
 				lastTimeRollover = nil
-				event.quit("restart")
+				-- FIXME: think this is how it should look like now, but haven't been able to test
+				event.restart()
 			else
 				lastTimeRollover = getTime
 				resetMessage()
