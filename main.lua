@@ -35,14 +35,13 @@ local checksPerFrame = conf and conf.checksPerFrame or 10
 
 local target = require("target")
 
-if not arg[0] then error("arg[0] missing-- this is impossible, something is wrong with this copy of lovr") end
 if not target then error("Please specify a project for lodr to run on the command line") end
 
 local watched = {}
 local makeWatchWrapper = require("makeWrapper")(watched, checksPerFrame)
 
-lovr.filesystem.unmount(target) -- Speculatively unload tempConfDir/ from conf.lua
-lovr.filesystem.unmount(arg[0]) -- Unload lodr
+lovr.filesystem.unmount(target) -- Speculatively unload tempConfDir/ from conf.lua-- will possibly do nothing.
+lovr.filesystem.unmount(lovr.filesystem.getSource()) -- Unload lodr
 
 local hasProject, hasMain, mainRealpath
 
@@ -193,7 +192,7 @@ else
 			tryMount()
 			if hasMain then
 				lastTimeRollover = nil
-				event.quit("restart")
+				event.restart()
 			else
 				lastTimeRollover = getTime
 				resetMessage()
