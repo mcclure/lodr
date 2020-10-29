@@ -27,18 +27,20 @@ if conf then
 	      and confFail(conf.watch and checkAllStrings(conf.watch), "conf.lodr.watch contained a non-string value")
 end
 
+local mainReturn
+
 -- Because of conf tomfoolery, all lovr packages except filesystem need to be manually required
 local timer = require("lovr.timer")
 
 -- Constants
 local checksPerFrame = conf and conf.checksPerFrame or 10
 
-local target = require("target")
+local target = require("_lodrSupport.target")
 
 if not target then error("Please specify a project for lodr to run on the command line") end
 
 local watched = {}
-local makeWatchWrapper = require("makeWrapper")(watched, checksPerFrame)
+local makeWatchWrapper = require("_lodrSupport.makeWrapper")(watched, checksPerFrame)
 
 lovr.filesystem.unmount(lovr.filesystem.getSource()) -- Unload lodr
 
@@ -103,18 +105,19 @@ if hasMain then
 		if confData.confFunc then lovr.conf = confData.confFunc end
 
 		-- Erase all evidence we ever existed: Args
-		require "eraseArg"
+		require("_lodrSupport.eraseArg")
 
 		-- Erase all evidence we ever existed: Packages
 		package.loaded.main = nil
-		package.loaded.target = nil
-		package.loaded.makeWrapper = nil
-		package.loaded.eraseArg = nil
-		package.loaded.conf = package.loaded['tempConfDir.conf']
-		package.loaded['tempConfDir.conf'] = nil
+		package.loaded['_lodrSupport.target'] = nil
+		package.loaded['_lodrSupport.makeWrapper'] = nil
+		package.loaded['_lodrSupport.eraseArg'] = nil
+		if not confData.exists then
+			package.loaded.conf = nil
+		end
 
 		-- Run main
-		require 'main'
+		mainReturn = require("main")
 
 		lovr.run = makeWatchWrapper(lovr.run, "run")
 		if loadTimeErrhand ~= lovr.errhand and not (conf and conf.overrideErrhand) then -- Second errhand wrap only needed if main.lua has an errhand
@@ -203,3 +206,6 @@ else
     	graphics.print(message, -width / 2, 0, -20, 1, 0, 0, 0, 0, .55 * pixelDensity, 'left')
 	end
 end -- TODO: ConfError, not hasMain
+
+-- Although we un-set package.loaded.main earlier, it will be re-set with the value (if any) we return here.
+return mainReturn

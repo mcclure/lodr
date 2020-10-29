@@ -1,4 +1,4 @@
-local target = require("target")
+local target = require("_lodrSupport.target")
 local timer = require("lovr.timer")
 
 -- Special value for passing data to main.lua
@@ -25,15 +25,14 @@ if target then
 		_lodrConfData.exists = true
 
 		-- This temporary wrapper is only to catch errors in conf.lua and lovr.conf().
-		-- Note it assumes conf.lua creates no threads,
-		-- and note that calling require() from conf.lua may not work right.
+		-- Note it assumes conf.lua creates no threads.
 		local watched = {confPath, [confPath]=timer.getTime()}
-		local makeWatchWrapper = require("makeWrapper")(watched, 10)
+		local makeWatchWrapper = require("_lodrSupport.makeWrapper")(watched, 10)
 		local originalErrhand = lovr.errhand -- Store errhand from boot.lua
 		local confErrhand = makeWatchWrapper(originalErrhand, "errhand (conf.lua)")
 
 		-- Execute conf.lua
-		require "eraseArg"
+		require("_lodrSupport.eraseArg")
 		lovr.errhand = confErrhand
 		confReturned = require("conf")
 		lovr.errhand = originalErrhand
@@ -65,5 +64,5 @@ if target then
 	end
 end
 
--- Although we un-set conf earlier, it will be re-set with the value (if any) we return here.
+-- Although we un-set package.loaded.conf earlier, it will be re-set with the value (if any) we return here.
 return confReturned

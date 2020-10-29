@@ -1,5 +1,7 @@
--- lodr helper creates a replacement for a built-in lovr function (like lovr.run or lovr.errhand)
+-- lodr helper creates a replacement for a built-in lovr function (like lovr.run or lovr.errhand),
 -- which injects a check for changed files into the event loop.
+local timer = require("lovr.timer")
+local event = require("lovr.event")
 return function(watched, checksPerFrame)
 	return function(wrappedFunc, wrapTag)
 		return function(...)
@@ -7,8 +9,6 @@ return function(watched, checksPerFrame)
 			local lastTimeRollover
 			local watchedc = #watched
 			local watchiter = watchedc+1
-			local timer = require("lovr.timer")
-			local event = require("lovr.event")
 			local initialized = false
 
 			return function(...)
