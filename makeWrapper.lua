@@ -1,3 +1,5 @@
+-- lodr helper creates a replacement for a built-in lovr function (like lovr.run or lovr.errhand)
+-- which injects a check for changed files into the event loop.
 return function(watched, checksPerFrame)
 	return function(wrappedFunc, wrapTag)
 		return function(...)

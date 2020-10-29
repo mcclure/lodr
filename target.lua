@@ -1,3 +1,4 @@
+-- lodr helper figures out what directory it is we're supposed to be running
 if lovr.getOS() == "Android" then
 	lovr.filesystem.setIdentity("IGNORETHIS") -- This will be ignored and is to work around a bug in Lovr 0.14.
 	local appId = lovr.filesystem.getIdentity()

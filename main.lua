@@ -103,17 +103,16 @@ if hasMain then
 
 		if confData.confFunc then lovr.conf = confData.confFunc end
 
+		-- Erase all evidence we ever existed: Args
+		require "eraseArg"
+
 		-- Erase all evidence we ever existed: Packages
 		package.loaded.main = nil
 		package.loaded.target = nil
 		package.loaded.makeWrapper = nil
+		package.loaded.eraseArg = nil
 		package.loaded.conf = package.loaded['tempConfDir.conf']
 		package.loaded['tempConfDir.conf'] = nil
-
-		-- Erase all evidence we ever existed: Args
-		arg[0] = target
-		local argc = #arg
-		for i=1,argc do arg[i] = arg[i+1] end
 
 		-- Run main
 		require 'main'
@@ -124,6 +123,7 @@ if hasMain then
 		end
 	end
 else
+	-- We couldn't find something to run. Print a helpful error message
 	local graphics = require("lovr.graphics")
 	local event = require("lovr.event")
 	local message, width, font, pixelDensity, lastTimeRollover
