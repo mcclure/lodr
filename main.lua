@@ -1,4 +1,4 @@
--- Nab data from conf
+-- Step one: Nab data from conf.lua
 local confData = _lodrConfData
 _lodrConfData = nil
 local conf = confData.conf and confData.conf.lodr
@@ -40,12 +40,11 @@ if not target then error("Please specify a project for lodr to run on the comman
 local watched = {}
 local makeWatchWrapper = require("makeWrapper")(watched, checksPerFrame)
 
-lovr.filesystem.unmount(target) -- Speculatively unload tempConfDir/ from conf.lua-- will possibly do nothing.
 lovr.filesystem.unmount(lovr.filesystem.getSource()) -- Unload lodr
 
 local hasProject, hasMain, mainRealpath
 
-function tryMount()
+local function tryMount()
 	hasProject = hasProject or lovr.filesystem.mount(target) -- Load target
 	hasMain = lovr.filesystem.isFile('main.lua')
 	if hasMain then mainRealpath = lovr.filesystem.getRealDirectory('main.lua') end
@@ -128,7 +127,7 @@ else
 	local event = require("lovr.event")
 	local message, width, font, pixelDensity, lastTimeRollover
 
-	function resetMessage()
+	local function resetMessage()
 		local lastMessage = message
 
 		-- This is kind of annoying actually
