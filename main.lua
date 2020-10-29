@@ -66,7 +66,7 @@ if hasMain then
 	-- TODO: Watching all files has good coverage but may not be the most efficient?
 	if not (conf and conf.watch) then
 		recursiveWatch("/")
-		if not confData.exists then
+		if not confData.exists then -- Must watch conf.lua even if it doesn't exist
 			table.insert(watched, "/conf.lua")
 		end
 	else

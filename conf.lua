@@ -12,16 +12,18 @@ package.loaded.conf = nil
 if target then
 	-- Some lovr projects will have a conf.lua in addition to the main.lua.
 	-- We need to temporarily load, execute, and unload this conf.lua *before* loading main.lua,
-	-- Becuase conf.lua determines the set of modules visible to main.lua.
-	local hasProject = lovr.filesystem.mount(target)
-	local confPath = "/conf.lua"
-	local hasConf = lovr.filesystem.isFile(confPath)
+	-- becuase conf.lua determines the set of modules visible to main.lua.
+	-- First, we need to load conf.lua to a special temp directory just to check if it exists at all
+	-- (since if we mount it at /, the check will always find lodr's conf.lua)
+	local hasProject = lovr.filesystem.mount(target, "_lodrTempConfPath")
+	local hasConf = hasProject and lovr.filesystem.isFile("_lodrTempConfPath/conf.lua")
+	lovr.filesystem.unmount(target) -- Unload temp directory
 
 	local function unloadConf() -- Have to unload before this file finishes so the project main.lua doesn't shadow lodr's!
 		lovr.filesystem.unmount(target)
 	end
 
-	if hasConf then
+	if hasConf and lovr.filesystem.mount(target) then
 		_lodrConfData.exists = true
 
 		-- This temporary wrapper is only to catch errors in conf.lua, lovr.conf() and anything they require.
@@ -62,8 +64,6 @@ if target then
 		else
 			unloadConf()
 		end
-	else
-		unloadConf()
 	end
 end
 
