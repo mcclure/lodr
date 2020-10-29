@@ -56,24 +56,7 @@ tryMount()
 --print("main?", hasMain)
 --for i, v in pairs(package.loaded) do print(i,v) end print("done")
 
-local function startsWith(s, prefix)
-	return s:sub(1, #prefix) == s
-end
-
-local function recursiveWatch(path)
-	if lovr.filesystem.isDirectory(path) then
-		for i,filename in ipairs(lovr.filesystem.getDirectoryItems(path)) do
-			if not startsWith(filename, ".") then -- Skip hidden files/directories
-				recursiveWatch((path ~= "/" and path or "") .. "/" .. filename)
-			end
-		end
-	else
-		-- Files in the save directory were written *by* the program; if they change, that isn't a program change. Don't watch them
-		if startsWith(lovr.filesystem.getRealDirectory(path), mainRealpath) then
-			table.insert(watched, path)
-		end
-	end
-end
+local recursiveWatch = require("_lodrSupport.recursiveWatch")(watched, mainRealpath)
 
 if hasMain then
 	if lovr.getOS() == "Android" then
@@ -109,9 +92,10 @@ if hasMain then
 
 		-- Erase all evidence we ever existed: Packages
 		package.loaded.main = nil
-		package.loaded['_lodrSupport.target'] = nil
-		package.loaded['_lodrSupport.makeWrapper'] = nil
 		package.loaded['_lodrSupport.eraseArg'] = nil
+		package.loaded['_lodrSupport.makeWrapper'] = nil
+		package.loaded['_lodrSupport.recursiveWatch'] = nil
+		package.loaded['_lodrSupport.target'] = nil
 		if not confData.exists then
 			package.loaded.conf = nil
 		end

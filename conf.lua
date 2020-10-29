@@ -17,18 +17,21 @@ if target then
 	local confPath = "/conf.lua"
 	local hasConf = lovr.filesystem.isFile(confPath)
 
-	local function unloadConf() -- Have to unload before continuing so lovr can find lodr's main.lua!
+	local function unloadConf() -- Have to unload before this file finishes so the project main.lua doesn't shadow lodr's!
 		lovr.filesystem.unmount(target)
 	end
 
 	if hasConf then
 		_lodrConfData.exists = true
 
-		-- This temporary wrapper is only to catch errors in conf.lua and lovr.conf().
+		-- This temporary wrapper is only to catch errors in conf.lua, lovr.conf() and anything they require.
 		-- Note it assumes conf.lua creates no threads.
-		local watched = {confPath, [confPath]=timer.getTime()}
+		local watched = {}
+		local recursiveWatch = require("_lodrSupport.recursiveWatch")(watched, lovr.filesystem.getRealDirectory('conf.lua'))
 		local makeWatchWrapper = require("_lodrSupport.makeWrapper")(watched, 10)
 		local originalErrhand = lovr.errhand -- Store errhand from boot.lua
+
+		recursiveWatch("/") -- This invocation will wind up watching all of lodr's files, but that's okay.
 		local confErrhand = makeWatchWrapper(originalErrhand, "errhand (conf.lua)")
 
 		-- Execute conf.lua

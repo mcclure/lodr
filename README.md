@@ -16,7 +16,7 @@ Lodr checks for a "lodr" table in the configuration table from conf.lua. You can
 
     function lovr.conf(t)
         t.lodr = {
-            checksPerFrame = 1   -- How many files lovr checks for changes every frame (default 10)
+            checksPerFrame = 1   -- How many files maximum lovr checks for changes every frame (default 10)
             watch = {"main.lua"} -- Watch only these files (by default watches every file in directory tree)
         }
     end
