@@ -1,4 +1,4 @@
-local target = require("_lodrSupport.target")
+local target = require("z_lodrSupport.target")
 local timer = require("lovr.timer")
 
 -- Special value for passing data to main.lua
@@ -29,15 +29,15 @@ if target then
 		-- This temporary wrapper is only to catch errors in conf.lua, lovr.conf() and anything they require.
 		-- Note it assumes conf.lua creates no threads.
 		local watched = {}
-		local recursiveWatch = require("_lodrSupport.recursiveWatch")(watched, lovr.filesystem.getRealDirectory('conf.lua'))
-		local makeWatchWrapper = require("_lodrSupport.makeWrapper")(watched, 10)
+		local recursiveWatch = require("z_lodrSupport.recursiveWatch")(watched, lovr.filesystem.getRealDirectory('conf.lua'))
+		local makeWatchWrapper = require("z_lodrSupport.makeWrapper")(watched, 10)
 		local originalErrhand = lovr.errhand -- Store errhand from boot.lua
 
 		recursiveWatch("/") -- This invocation will wind up watching all of lodr's files, but that's okay.
 		local confErrhand = makeWatchWrapper(originalErrhand, "errhand (conf.lua)")
 
 		-- Execute conf.lua
-		require("_lodrSupport.eraseArg")
+		require("z_lodrSupport.eraseArg")()
 		lovr.errhand = confErrhand
 		confReturned = require("conf")
 		lovr.errhand = originalErrhand

@@ -35,14 +35,16 @@ local timer = require("lovr.timer")
 -- Constants
 local checksPerFrame = conf and conf.checksPerFrame or 10
 
-local target = require("_lodrSupport.target")
+local target = require("z_lodrSupport.target")
 
 if not target then error("Please specify a project for lodr to run on the command line") end
 
 local watched = {}
-local makeWatchWrapper = require("_lodrSupport.makeWrapper")(watched, checksPerFrame)
+local makeWatchWrapper = require("z_lodrSupport.makeWrapper")(watched, checksPerFrame)
+local recursiveWatchMaker = require("z_lodrSupport.recursiveWatch")
+local eraseArg = require("z_lodrSupport.eraseArg")
 
-lovr.filesystem.unmount(lovr.filesystem.getSource()) -- Unload lodr
+lovr.filesystem.unmount(lovr.filesystem.getSource()) -- Unload lodr -- CANNOT REQUIRE() AFTER THIS POINT
 
 local hasProject, hasMain, mainRealpath
 
@@ -56,7 +58,7 @@ tryMount()
 --print("main?", hasMain)
 --for i, v in pairs(package.loaded) do print(i,v) end print("done")
 
-local recursiveWatch = require("_lodrSupport.recursiveWatch")(watched, mainRealpath)
+local recursiveWatch = recursiveWatchMaker(watched, mainRealpath)
 
 if hasMain then
 	if lovr.getOS() == "Android" then
@@ -88,14 +90,14 @@ if hasMain then
 		if confData.confFunc then lovr.conf = confData.confFunc end
 
 		-- Erase all evidence we ever existed: Args
-		require("_lodrSupport.eraseArg")
+		eraseArg()
 
 		-- Erase all evidence we ever existed: Packages
 		package.loaded.main = nil
-		package.loaded['_lodrSupport.eraseArg'] = nil
-		package.loaded['_lodrSupport.makeWrapper'] = nil
-		package.loaded['_lodrSupport.recursiveWatch'] = nil
-		package.loaded['_lodrSupport.target'] = nil
+		package.loaded['z_lodrSupport.eraseArg'] = nil
+		package.loaded['z_lodrSupport.makeWrapper'] = nil
+		package.loaded['z_lodrSupport.recursiveWatch'] = nil
+		package.loaded['z_lodrSupport.target'] = nil
 		if not confData.exists then
 			package.loaded.conf = nil
 		end
