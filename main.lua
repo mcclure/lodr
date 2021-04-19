@@ -61,7 +61,7 @@ tryMount()
 local recursiveWatch = recursiveWatchMaker(watched, mainRealpath)
 
 if hasMain then
-	if lovr.getOS() == "Android" then
+	if lovr.system.getOS() == "Android" then
 		print("Loading a script from the user files directory. To upload a new script, cd to your project directory and run: adb push --sync . " .. target)
 	end
 
@@ -143,7 +143,7 @@ else
 		else
 			message = message .. "does not contain a main.lua."
 		end
-		if lovr.getOS() == "Android" then
+		if lovr.system.getOS() == "Android" then
 			message = message .. "\n\nTo upload a " .. ((not hasProject or not atLeastOneFile) and "" or "fixed ")
 			                  .. "project,\ncd to your project directory and run:\n"
 			                  .. "adb push --sync . " .. target
