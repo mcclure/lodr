@@ -8,9 +8,9 @@ Go to the [releases page](https://github.com/mcclure/lodr/releases) for Lodr and
 
 You will need your Quest in [developer mode](https://learn.adafruit.com/sideloading-on-oculus-quest/enable-developer-mode). You will also need the `adb` command line tool. For example, on Macintosh, you can get `adb` by installing [Homebrew](https://brew.sh/) and running `brew cask install android-platform-tools`; or, you can install [Android Studio](https://developer.android.com/studio), install "Android SDK Platform-Tools" during the first-run setup, and then run `export PATH="~/Library/Android/sdk/platform-tools:$PATH"` in your Terminal.app window before running the following commands. On Windows, to run adb, you can run [these instructions](https://www.howtogeek.com/125769/how-to-install-and-use-abd-the-android-debug-bridge-utility/) (but you will also need to install the special [Quest ADB driver for Windows](https://developer.oculus.com/downloads/package/oculus-adb-drivers/)).
 
-After downloading `org.lovr.hotswap.apk`, run:
+After downloading `org.lovr.hotswap.apk`, `cd` to your download folder and run:
 
-    adb install -r build/lovr.apk
+    adb install -r org.lovr.hotswap.apk
 
 You only have to do this once.
 
