@@ -161,16 +161,15 @@ else
 			message = message .. "\n\nPlz fix"
 		end
 		width = font:getWidth(message, .55 * pixelDensity)
-		
+
 		if message ~= lastMessage then print(message) end
 	end
 
 	function lovr.load()
 		lastTimeRollover = timer.getTime()
-		font = lovr.graphics.getFont()
+		font = lovr.graphics.getDefaultFont()
 		pixelDensity = font:getPixelDensity()
 		graphics.setBackgroundColor(.105, .098, .137) -- look like boot.lua errhand
-  		graphics.setColor(.863, .863, .863)
 		resetMessage()
 	end
 
@@ -188,8 +187,9 @@ else
 		end
 	end
 
-	function lovr.draw()
-    	graphics.print(message, -width / 2, 0, -20, 1, 0, 0, 0, 0, .55 * pixelDensity, 'left')
+	function lovr.draw(pass)
+		pass:setColor(.863, .863, .863)
+		pass:text(message, -width / 2, 0, -20, 1, 0, 0, 0, 0, .55 * pixelDensity, 'left')
 	end
 end -- TODO: ConfError, not hasMain
 
